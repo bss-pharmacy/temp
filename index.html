@@ -147,6 +147,18 @@ dl.kv dt{color:var(--ink2)} dl.kv dd{margin:0;font-weight:500}
 .note{font-size:13.5px;background:var(--brand-2);border-radius:12px;padding:10px 12px;color:#0b4f4e;margin-top:12px}
 .banner{border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px;background:var(--wait-2);color:#713f12}
 
+/* กล้องในหน้าเว็บ — ถ่ายสดเท่านั้น เลือกรูปเก่าจากแกลเลอรีไม่ได้ */
+.cam{position:fixed;inset:0;background:#000;z-index:80;display:none;flex-direction:column}
+.cam.on{display:flex}
+.cam video{flex:1;width:100%;min-height:0;object-fit:cover}
+.cam .frame{position:absolute;left:10%;right:10%;top:30%;height:26%;border:3px solid rgba(255,255,255,.85);border-radius:14px;pointer-events:none}
+.cam .hint{position:absolute;left:0;right:0;top:calc(30% - 34px);text-align:center;color:#fff;font-size:15px;text-shadow:0 1px 3px #000}
+.cam .bar{display:flex;align-items:center;justify-content:space-between;padding:18px 24px calc(18px + env(safe-area-inset-bottom));background:#000}
+.cam .bar button{background:none;border:0;color:#fff;font-size:16px;min-width:70px;cursor:pointer}
+.cam .shutter{width:72px;height:72px;border-radius:50%;border:5px solid #fff!important;background:#fff!important;box-shadow:inset 0 0 0 4px #000;min-width:0!important}
+.lockbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;color:var(--ink2)}
+.lockbar button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:6px 12px;font-size:14px;cursor:pointer}
+.valbox input[readonly]{color:var(--ink)}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:var(--ink);color:#fff;border-radius:12px;padding:10px 16px;font-size:14.5px;z-index:60;max-width:92vw;text-align:center;pointer-events:none}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--bad)}
@@ -368,15 +380,17 @@ function openForm(p) {
       <div class="step"><span class="lbl">2. รหัสพนักงานผู้บันทึก</span>
         <input class="inp" id="f-staff" value="${esc(savedStaff)}" placeholder="พิมพ์รหัสพนักงาน" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <div id="f-staffname" class="muted small" style="margin-top:6px"></div></div>
-      <div class="step"><span class="lbl">3. ถ่ายรูปหน้าจอเทอร์โมมิเตอร์ <span class="muted small" style="font-weight:400">· ใช้ให้ AI อ่านค่า ระบบไม่เก็บรูป</span></span>
+      <div class="step"><span class="lbl">3. ถ่ายรูปหน้าจอเครื่องวัด <span class="muted small" style="font-weight:400">· เก็บเป็นหลักฐาน ถ่ายเฉพาะหน้าจอ</span></span>
         <input type="file" id="f-file" accept="image/*" capture="environment" hidden>
-        <div id="f-photo"><label class="shot" for="f-file"><span class="big">📷</span><b>แตะเพื่อถ่ายรูป</b><span class="small">ถ่ายให้เห็นตัวเลขชัด ไม่มีแสงสะท้อน</span></label></div>
+        <div id="f-photo"><button type="button" class="shot" id="f-cam" style="width:100%"><span class="big">📷</span><b>แตะเพื่อเปิดกล้อง</b><span class="small">ถ่ายให้เห็นตัวเลขชัด ไม่มีแสงสะท้อน</span></button></div>
         <div id="f-ai"></div></div>
       <div class="step"><span class="lbl">4. ตรวจสอบค่าที่อ่านได้</span>
         <div class="vals ${isRoom ? 'two' : ''}">
           <div class="valbox" id="vb-t"><div class="rng">อุณหภูมิ</div><div class="u"><input id="f-t" inputmode="decimal" placeholder="—" autocomplete="off"><span class="unit">°C</span></div><div class="rng">เกณฑ์ ${p.minT}–${p.maxT}</div></div>
           ${isRoom ? `<div class="valbox" id="vb-rh"><div class="rng">ความชื้น</div><div class="u"><input id="f-rh" inputmode="decimal" placeholder="—" autocomplete="off"><span class="unit">%RH</span></div><div class="rng">เกณฑ์ ${p.minRH}–${p.maxRH}</div></div>` : ''}
         </div>
+        <div id="f-lockbar" class="lockbar" style="display:none"><span>🔒 ใช้ค่าที่ AI อ่านจากรูป</span><button type="button" id="f-unlock">แก้ค่า</button></div>
+        <div id="f-reason" style="display:none;margin-top:10px"><span class="lbl">เหตุผลที่แก้ค่าจาก AI <span style="color:var(--bad)">*</span></span><textarea class="inp" id="f-ereason" placeholder="เช่น AI อ่าน 6 เป็น 8 / AI อ่านค่า MAX แทนค่าปัจจุบัน"></textarea></div>
         <div id="f-out" style="display:none" class="alert"><b>⚠ ค่าผิดเกณฑ์</b> — แจ้ง Incharge / หัวหน้าเวร และหน่วยงานเครื่องมือแพทย์ แล้วกรอกข้อมูลด้านล่าง
           <div style="margin-top:10px"><span class="lbl" style="color:#7f1d1d">ความผิดปกติที่พบ</span><textarea class="inp" id="f-issue" placeholder="เช่น อุณหภูมิสูงขึ้นหลังเปิดตู้นาน / ตู้ไม่เย็น"></textarea></div>
           <div style="margin-top:8px"><span class="lbl" style="color:#7f1d1d">การแก้ไขที่ทำแล้ว</span><textarea class="inp" id="f-action" placeholder="เช่น ปิดประตูตู้ ตรวจซ้ำหลัง 5 นาที / ย้ายยาไปตู้ 2 และแจ้งช่าง"></textarea></div>
@@ -391,7 +405,9 @@ function openForm(p) {
   $('#f-staff').oninput = () => { F.staff = null; clearTimeout(F.staffTimer); F.staffTimer = setTimeout(checkStaff, 500); validate(); };
   if (savedStaff) checkStaff();
   $('#f-file').onchange = onPhoto;
-  ['#f-issue', '#f-action'].forEach(s => { const el = $(s); if (el) el.oninput = validate; });
+  $('#f-cam').onclick = openCamera;
+  $('#f-unlock').onclick = () => { lockVals(false); $('#f-t').focus(); validate(); };
+  ['#f-issue', '#f-action', '#f-ereason'].forEach(s => { const el = $(s); if (el) el.oninput = validate; });
   ['#f-t', '#f-rh'].forEach(s => { const el = $(s); if (el) el.oninput = () => { if (F.aiBusy) { F.manual = true; $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>ใช้ค่าที่กรอกเอง — บันทึกได้เลยไม่ต้องรอ AI</div></div>`; } validate(); }; });
   $('#f-ok').onchange = validate;
   $('#f-save').onclick = save;
@@ -412,18 +428,72 @@ async function checkStaff() {
   } catch (e) { if (F) { box.style.color = 'var(--bad)'; box.textContent = 'ตรวจรหัสไม่สำเร็จ ลองใหม่อีกครั้ง'; } }
   validate();
 }
-function closeForm() { $('#rec-form').style.display = 'none'; $('#rec-list').style.display = 'block'; F = null; renderPoints(); }
+function closeForm() { closeCamera(); $('#rec-form').style.display = 'none'; $('#rec-list').style.display = 'block'; F = null; renderPoints(); }
 
+/* ---------- กล้องในหน้าเว็บ: ถ่ายสดเท่านั้น ได้เวลาถ่ายจริง ---------- */
+let camStream = null;
+function camEl() {
+  let el = $('#cam'); if (el) return el;
+  el = document.createElement('div'); el.className = 'cam'; el.id = 'cam';
+  el.innerHTML = `<video playsinline muted autoplay></video><div class="hint">เล็งให้ตัวเลขบนจออยู่ในกรอบ</div><div class="frame"></div>
+    <div class="bar"><button type="button" id="cam-x">ยกเลิก</button><button type="button" class="shutter" id="cam-shot" aria-label="ถ่ายรูป"></button><span style="min-width:70px"></span></div>`;
+  document.body.appendChild(el);
+  $('#cam-x').onclick = closeCamera; $('#cam-shot').onclick = shoot;
+  return el;
+}
+async function openCamera() {
+  const fallback = why => { $('#f-ai').innerHTML = `<div class="ai warn">📷 <div>${esc(why)} — <label for="f-file" style="text-decoration:underline;cursor:pointer"><b>แตะที่นี่เพื่อถ่ายด้วยกล้องของมือถือ</b></label></div></div>`; };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return fallback('เบราว์เซอร์นี้เปิดกล้องในหน้าเว็บไม่ได้ (ถ้าเปิดจากไลน์ ให้เปิดด้วย Chrome/Safari)');
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+  } catch (e) {
+    return fallback(e && e.name === 'NotAllowedError' ? 'ยังไม่ได้อนุญาตให้ใช้กล้อง (กดอนุญาตในเบราว์เซอร์)' : 'เปิดกล้องในหน้าเว็บไม่ได้');
+  }
+  const el = camEl(); el.querySelector('video').srcObject = camStream; el.classList.add('on');
+}
+function closeCamera() {
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  camStream = null; const el = $('#cam'); if (el) el.classList.remove('on');
+}
+function shoot() {
+  const v = $('#cam video'); if (!v.videoWidth) return;
+  const s = Math.min(1, 1024 / Math.max(v.videoWidth, v.videoHeight)); // เล็กพอให้ส่งเร็ว ตัวเลขบนจอยังชัด
+  const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const at = bkkNow().getTime(); // เวลาถ่ายจริง (ปรับตามนาฬิกาเซิร์ฟเวอร์แล้ว)
+  closeCamera();
+  setPhoto(c.toDataURL('image/jpeg', 0.75), at, 'camera');
+}
+/* สำรอง: ถ่ายด้วยแอปกล้องของมือถือ — เวลาถ่ายจากไฟล์ และหัวหน้าจะเห็นเครื่องหมายว่าไม่ได้ถ่ายในเว็บ */
 async function onPhoto(e) {
   const file = e.target.files[0]; if (!file) return;
   try {
-    const dataUrl = await compressImage(file, 1024, 0.75); // เล็กพอให้ส่งเร็ว ตัวเลขบนจอยังชัด
-    F.photo = dataUrl; F.ai = null;
-    $('#f-photo').innerHTML = `<div class="preview"><img src="${dataUrl}" alt="รูปเทอร์โมมิเตอร์"><label class="retake" for="f-file">📷 ถ่ายใหม่</label></div>`;
+    const dataUrl = await compressImage(file, 1024, 0.75);
     e.target.value = '';
-    runAI();
+    setPhoto(dataUrl, file.lastModified + clockOffset, 'file');
   } catch (err) { toast('อ่านรูปไม่สำเร็จ ลองถ่ายใหม่', true); }
-  validate();
+}
+function setPhoto(dataUrl, at, src) {
+  F.photo = dataUrl; F.photoAt = at; F.photoSrc = src; F.ai = null;
+  ['#f-t', '#f-rh'].forEach(s => { if ($(s)) $(s).value = ''; });
+  lockVals(false); $('#f-ereason').value = '';
+  const hhmm = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(at));
+  $('#f-photo').innerHTML = `<div class="preview"><img src="${dataUrl}" alt="รูปหน้าจอเครื่องวัด"><button type="button" class="retake" id="f-retake">📷 ถ่ายใหม่</button></div>
+    <div class="muted small" style="margin-top:6px">ถ่ายเมื่อ ${hhmm} น.${src === 'camera' ? '' : ' · จากกล้องของมือถือ'}</div>`;
+  $('#f-retake').onclick = src === 'camera' ? openCamera : () => $('#f-file').click();
+  runAI(); validate();
+}
+/* ล็อกช่องตัวเลขเมื่อใช้ค่าที่ AI อ่าน — จะแก้ต้องกด "แก้ค่า" และใส่เหตุผล */
+function lockVals(on) {
+  F.locked = on;
+  ['#f-t', '#f-rh'].forEach(s => { if ($(s)) $(s).readOnly = on; });
+  $('#f-lockbar').style.display = on ? 'flex' : 'none';
+}
+const r1 = v => v == null ? null : Math.round(v * 10) / 10;
+function differsFromAI() {
+  if (!F.ai) return false;
+  if (r1(num($('#f-t'))) !== r1(F.ai.temperature)) return true;
+  return !!$('#f-rh') && F.ai.humidity != null && r1(num($('#f-rh'))) !== r1(F.ai.humidity);
 }
 function compressImage(file, max, q) {
   return new Promise((res, rej) => {
@@ -448,13 +518,14 @@ async function runAI() {
   try {
     const r = await api('readThermometer', F.photo.split(',')[1], 'image/jpeg', F.p.type);
     if (!F || F.photo !== photoAtStart) return;
-    if (F.manual) { // พนักงานพิมพ์ค่าเองระหว่างรอ → ไม่เขียนทับ
-      F.ai = null;
-      $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>ใช้ค่าที่กรอกเอง${r.ok && r.temperature != null ? ` (AI อ่านได้ ${fmt1(r.temperature)} °C${r.humidity != null ? ' · ' + Math.round(r.humidity) + ' %RH' : ''})` : ''} — <b>ตรวจให้ตรงกับหน้าจอ</b></div></div>`;
+    if (F.manual) { // พนักงานพิมพ์ค่าเองระหว่างรอ → ไม่เขียนทับ แต่เก็บค่าที่ AI อ่านไว้เทียบ (ไม่ตรงต้องใส่เหตุผล)
+      F.ai = r.ok && r.temperature != null ? r : null;
+      $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>ใช้ค่าที่กรอกเอง${F.ai ? ` (AI อ่านได้ ${fmt1(r.temperature)} °C${r.humidity != null ? ' · ' + Math.round(r.humidity) + ' %RH' : ''})` : ''} — <b>ตรวจให้ตรงกับหน้าจอ</b></div></div>`;
     } else if (r.ok && r.temperature != null) {
       F.ai = r;
       $('#f-t').value = r.temperature;
       if ($('#f-rh') && r.humidity != null) $('#f-rh').value = r.humidity;
+      lockVals(r.confidence === 'high'); // ไม่แน่ใจ → ปล่อยให้ตรวจแก้ได้ (ถ้าแก้ต้องใส่เหตุผล)
       const cls = r.confidence === 'high' ? 'good' : 'warn';
       const txt = r.confidence === 'high' ? 'AI อ่านค่าได้ — <b>ตรวจให้ตรงกับหน้าจออีกครั้ง</b>' : `AI ไม่แน่ใจ${r.note ? ' (' + esc(r.note) + ')' : ''} — <b>ตรวจและแก้ตัวเลขให้ถูกต้อง</b>`;
       $('#f-ai').innerHTML = `<div class="ai ${cls}">${r.confidence === 'high' ? '🤖' : '⚠️'} <div>${txt}</div></div>`;
@@ -475,8 +546,11 @@ function validate() {
   if ($('#vb-rh')) $('#vb-rh').className = 'valbox' + (rh == null ? '' : rhBad ? ' bad' : ' good');
   const out = tBad || rhBad;
   $('#f-out').style.display = out ? 'block' : 'none';
-  const ready = F.slot && F.staff && (F.photo || !B.settings.aiReady) && (!F.aiBusy || F.manual) && t != null &&
-    (p.type !== 'ROOM' || rh != null) && $('#f-ok').checked && (!out || ($('#f-issue').value.trim() && $('#f-action').value.trim()));
+  const needReason = differsFromAI();
+  $('#f-reason').style.display = needReason ? 'block' : 'none';
+  const ready = F.slot && F.staff && F.photo && (!F.aiBusy || F.manual) && t != null &&
+    (p.type !== 'ROOM' || rh != null) && $('#f-ok').checked && (!out || ($('#f-issue').value.trim() && $('#f-action').value.trim())) &&
+    (!needReason || $('#f-ereason').value.trim());
   $('#f-save').disabled = !ready;
 }
 async function save() {
@@ -486,7 +560,8 @@ async function save() {
     pointId: p.id, slot: F.slot, temp: num($('#f-t')), rh: num($('#f-rh')),
     aiTemp: F.ai ? F.ai.temperature : null, aiRh: F.ai ? F.ai.humidity : null, aiConf: F.ai ? F.ai.confidence : '',
     staffId: F.staff.id,
-    issue: $('#f-issue') ? $('#f-issue').value : '', action: $('#f-action') ? $('#f-action').value : ''
+    issue: $('#f-issue') ? $('#f-issue').value : '', action: $('#f-action') ? $('#f-action').value : '',
+    photo: F.photo, photoAt: F.photoAt, photoSrc: F.photoSrc, editReason: $('#f-ereason').value
   };
   try {
     const r = await api('saveReading', payload);
@@ -495,7 +570,7 @@ async function save() {
       <h2 style="font-size:20px">บันทึกเรียบร้อย</h2>
       <p class="muted" style="margin:6px 0 2px">${esc(p.name)} · รอบ${esc(slot.label)} · ${r.time} น.${r.late ? ' (ล่าช้า)' : ''}</p>
       <p style="font:600 30px var(--head);margin:6px 0">${fmt1(payload.temp)} °C${p.type === 'ROOM' ? ` · ${fmt1(payload.rh)} %RH` : ''}</p>
-      <p class="muted small">ผู้บันทึก: ${esc(r.staffName)}</p>
+      <p class="muted small">ผู้บันทึก: ${esc(r.staffName)} · ${r.photoSaved ? '📷 เก็บรูปแล้ว' : '⚠ เก็บรูปไม่สำเร็จ (บันทึกค่าแล้ว)'}</p>
       ${r.out ? `<p class="small" style="color:var(--bad)">ค่าผิดเกณฑ์ — กรุณาแจ้ง Incharge / หัวหน้าเวรทันที</p>` : ''}
       <button class="btn block" id="f-next">บันทึกจุดถัดไป</button></div>`;
     $('#f-next').onclick = closeForm;
@@ -556,6 +631,8 @@ function showRec(rows, key) {
     ${r.rh != null ? `<dt>ความชื้น</dt><dd>${fmt1(r.rh)} %RH</dd>` : ''}
     <dt>ผู้บันทึก</dt><dd>${esc(r.staffName)}</dd>
     <dt>ที่มาของค่า</dt><dd>${r.edited === 'MANUAL' ? 'กรอกเอง' : r.edited === 'Y' ? 'AI อ่าน แล้วพนักงานแก้ไข' : 'AI อ่าน + พนักงานยืนยัน'}</dd>
+    ${r.shot ? `<dt>เวลาถ่ายรูป</dt><dd>${esc(r.shot)} น.</dd>` : ''}
+    ${r.flag ? `<dt>ให้หัวหน้าตรวจ</dt><dd style="color:var(--wait)">${esc(r.flag)}</dd>` : ''}
     ${r.out ? `<dt>ความผิดปกติ</dt><dd>${esc(r.issue)}</dd><dt>การแก้ไข</dt><dd>${esc(r.action)}</dd>` : ''}</dl>`;
   $('#modal').classList.add('on');
   $('#m-x').onclick = () => $('#modal').classList.remove('on');
