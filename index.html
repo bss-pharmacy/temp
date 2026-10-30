@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<title>บันทึกอุณหภูมิ · คลังยาและเวชภัณฑ์</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e7c7b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="บันทึกอุณหภูมิ">
+<script src="config.js"></script>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;500;600;700&family=Tinos:wght@400;700&family=Taviraj:wght@400;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{
+  --ink:#10283a; --ink2:#4a6274; --line:#dbe4ea; --bg:#f3f6f8; --card:#fff;
+  --brand:#0e7c7b; --brand-2:#e3f3f2; --cold:#2563eb; --cold-2:#e6eefc; --room:#b45309; --room-2:#fdf1e3;
+  --ok:#15803d; --ok-2:#e3f5e8; --bad:#c81e1e; --bad-2:#fde8e8; --wait:#a16207; --wait-2:#fdf6dc; --miss:#6b7280; --miss-2:#eef0f2;
+  --r:14px; --font:'Sarabun','Waree','Tahoma',sans-serif; --head:'Prompt','Sarabun','Waree',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--head);font-weight:600;margin:0;line-height:1.3}
+.appbar{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.appbar .logo{width:34px;height:34px;border-radius:10px;background:var(--brand);display:grid;place-items:center;font-size:19px}
+.appbar h1{font-size:16px}.appbar small{display:block;font-size:12px;opacity:.75;font-family:var(--font);font-weight:400}
+.appbar .clock{margin-left:auto;font-variant-numeric:tabular-nums;font-size:14px;opacity:.9;text-align:right}
+main{max-width:980px;margin:0 auto;padding:16px 16px 96px}
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;max-width:200px;border:0;background:none;padding:9px 4px 10px;font-size:13px;color:var(--ink2);display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer}
+.tabbar button .i{font-size:21px;line-height:1.1}
+.tabbar button.on{color:var(--brand);font-weight:600}
+.view{display:none}.view.on{display:block}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:6px 2px 12px}
+.sec-h h2{font-size:19px}.sec-h p{margin:0;color:var(--ink2);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.muted{color:var(--ink2)} .small{font-size:13px}
+.grid{display:grid;gap:12px}
+@media(min-width:640px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
+.g4m{grid-template-columns:1fr 1fr}
+@media(min-width:640px){.g4m{grid-template-columns:repeat(4,1fr)}}
+
+/* จุดตรวจ */
+.point{display:flex;gap:12px;align-items:center;text-align:left;width:100%;cursor:pointer;transition:transform .08s,box-shadow .15s}
+.point:hover{box-shadow:0 4px 14px rgba(16,40,58,.08)} .point:active{transform:scale(.99)}
+.picon{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:24px;flex:none}
+.FRIDGE .picon{background:var(--cold-2)} .ROOM .picon{background:var(--room-2)}
+.point h3{font-size:16px}.point .crit{font-size:12.5px;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.st-ok{background:var(--ok-2);color:var(--ok)} .st-late{background:var(--ok-2);color:var(--ok)}
+.st-out{background:var(--bad-2);color:var(--bad)} .st-open{background:var(--wait-2);color:var(--wait)}
+.st-upcoming,.st-future{background:var(--miss-2);color:var(--miss)} .st-missing{background:#fbe4ea;color:#9f1239}
+.arrow{margin-left:auto;color:var(--ink2);font-size:22px}
+
+/* ฟอร์มบันทึก */
+.back{border:0;background:none;color:var(--brand);font-weight:600;padding:4px 0;cursor:pointer;font-size:15px}
+.form-h{display:flex;gap:12px;align-items:center;margin:4px 0 14px}
+.step{margin-top:14px}
+.step>label,.lbl{display:block;font-weight:600;margin-bottom:6px;font-size:15px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1;min-width:120px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px;text-align:left;cursor:pointer}
+.seg button b{display:block;font-size:15px}.seg button span{font-size:12.5px;color:var(--ink2)}
+.seg button.on{border-color:var(--brand);background:var(--brand-2)}
+.seg button:disabled{opacity:.55;cursor:not-allowed;background:var(--miss-2)}
+.inp{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;font-size:16px}
+.inp:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-2)}
+.row2{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.shot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed #9fb7c4;border-radius:var(--r);padding:22px;background:#f8fbfc;cursor:pointer;text-align:center;color:var(--ink2)}
+.shot .big{font-size:38px}.shot b{color:var(--ink)}
+.preview{position:relative;border-radius:var(--r);overflow:hidden;background:#000}
+.preview img{display:block;width:100%;max-height:340px;object-fit:contain}
+.preview .retake{position:absolute;right:10px;bottom:10px;border:0;border-radius:999px;padding:7px 14px;background:rgba(255,255,255,.92);font-weight:600;cursor:pointer}
+.ai{margin-top:10px;border-radius:12px;padding:10px 12px;font-size:14px;display:flex;gap:8px;align-items:flex-start}
+.ai.wait{background:var(--miss-2)} .ai.good{background:var(--brand-2)} .ai.warn{background:var(--wait-2)}
+.spin{width:16px;height:16px;border:2.5px solid #c5d3dc;border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite;flex:none;margin-top:3px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.vals{display:grid;gap:10px;grid-template-columns:1fr}
+.vals.two{grid-template-columns:1fr 1fr}
+.valbox{border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+.valbox .u{display:flex;align-items:baseline;gap:6px}
+.valbox input{border:0;width:100%;font:600 32px/1.1 var(--head);padding:2px 0;background:transparent;font-variant-numeric:tabular-nums}
+.valbox input:focus{outline:none}.valbox .unit{font-size:17px;color:var(--ink2);font-weight:600}
+.valbox .rng{font-size:12.5px;color:var(--ink2)}
+.valbox.good{border-color:var(--ok);background:var(--ok-2)} .valbox.bad{border-color:var(--bad);background:var(--bad-2)}
+.alert{border-radius:12px;padding:12px;background:var(--bad-2);color:#7f1d1d;font-size:14.5px;margin-top:12px}
+.alert b{color:var(--bad)}
+textarea.inp{min-height:68px;resize:vertical}
+.confirm{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14.5px;cursor:pointer}
+.confirm input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--brand)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:13px 18px;font-weight:600;font-size:16px;cursor:pointer;background:var(--brand);color:#fff}
+.btn.block{width:100%;margin-top:16px}
+.btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.done{text-align:center;padding:28px 18px}
+.done .ic{width:72px;height:72px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;font-size:38px;background:var(--ok-2)}
+.done.bad .ic{background:var(--bad-2)}
+
+/* Dashboard */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.toolbar .inp{width:auto;padding:8px 10px;font-size:15px}
+.subtabs{display:inline-flex;background:#e4ebef;border-radius:12px;padding:3px;margin-bottom:14px}
+.subtabs button{border:0;background:none;padding:7px 16px;border-radius:10px;font-weight:600;color:var(--ink2);cursor:pointer}
+.subtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kpi{padding:14px}.kpi .n{font:600 28px/1.15 var(--head);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--ink2)} .kpi.bad .n{color:var(--bad)} .kpi.ok .n{color:var(--ok)} .kpi.miss .n{color:#9f1239}
+.dayrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.dayrow:first-child{border-top:0;padding-top:2px}
+.dayrow .nm{min-width:150px;font-weight:600}
+.dayrow .chips{margin:0}
+.chip.click{cursor:pointer;border:0}
+.pcard h3{font-size:16px;display:flex;align-items:center;gap:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.stats div{background:var(--bg);border-radius:10px;padding:8px}
+.stats b{display:block;font:600 19px var(--head);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--ink2)}
+.chart{width:100%;height:auto;display:block;margin-top:4px}
+table.list{width:100%;border-collapse:collapse;font-size:14px}
+table.list th,table.list td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.list th{font-size:12.5px;color:var(--ink2);font-weight:600}
+.empty{padding:20px;text-align:center;color:var(--ink2)}
+
+/* Modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(10,25,35,.55);display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px}
+@media(min-width:640px){.modal{align-items:center}.sheet{border-radius:18px}}
+.sheet img{width:100%;border-radius:12px;background:#000;max-height:50vh;object-fit:contain}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:12px 0 0;font-size:14.5px}
+dl.kv dt{color:var(--ink2)} dl.kv dd{margin:0;font-weight:500}
+
+/* รายงาน */
+.pchecks{display:flex;flex-wrap:wrap;gap:8px}
+.pchecks label{display:flex;gap:6px;align-items:center;border:1.5px solid var(--line);border-radius:999px;padding:5px 12px;background:#fff;cursor:pointer;font-size:14.5px}
+.pchecks input{accent-color:var(--brand)}
+.pages{display:grid;gap:16px;margin-top:16px}
+.page{background:#fff;box-shadow:0 2px 12px rgba(16,40,58,.12);aspect-ratio:297/210;width:100%}
+.page svg{width:100%;height:100%;display:block}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
+.qrcard{text-align:center;padding:14px}
+.qrcard svg{width:160px;height:160px}
+.qrcard h3{font-size:17px;margin-top:6px}
+.note{font-size:13.5px;background:var(--brand-2);border-radius:12px;padding:10px 12px;color:#0b4f4e;margin-top:12px}
+.banner{border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px;background:var(--wait-2);color:#713f12}
+
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:var(--ink);color:#fff;border-radius:12px;padding:10px 16px;font-size:14.5px;z-index:60;max-width:92vw;text-align:center;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--bad)}
+.loading{padding:40px;text-align:center;color:var(--ink2)}
+
+@media print{
+  @page{size:A4 landscape;margin:0}
+  html,body{background:#fff}
+  .appbar,.tabbar,.no-print,.toast,.modal{display:none!important}
+  main{padding:0;max-width:none}
+  .view{display:none!important}
+  body[data-print="report"] #v-report{display:block!important}
+  body[data-print="qr"] #v-report{display:block!important}
+  body[data-print="report"] .qr-wrap{display:none!important}
+  body[data-print="qr"] .pages{display:none!important}
+  .pages{display:block;margin:0}
+  .page{box-shadow:none;width:297mm;height:210mm;aspect-ratio:auto;break-after:page;page-break-after:always;overflow:hidden}
+  .page:last-child{break-after:auto;page-break-after:auto}
+  .qr-wrap .card{border:0;padding:0}
+  .qrgrid{grid-template-columns:repeat(3,1fr);gap:8mm;padding:10mm}
+  .qrcard{border:1.5px dashed #999!important;break-inside:avoid;padding:6mm!important}
+  .qrcard svg{width:45mm;height:45mm}
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="logo">🌡️</div>
+  <div><h1>บันทึกอุณหภูมิ · ความชื้น</h1><small id="dept">คลังยาและเวชภัณฑ์</small></div>
+  <div class="clock" id="clock"></div>
+</header>
+
+<main>
+  <!-- ========== บันทึก ========== -->
+  <section class="view on" id="v-record">
+    <div id="rec-list">
+      <div class="sec-h"><h2>เลือกจุดตรวจ</h2><p id="rec-date"></p></div>
+      <div id="setup-banner"></div>
+      <div class="grid g2" id="points"><div class="loading">กำลังโหลด…</div></div>
+    </div>
+    <div id="rec-form" style="display:none"></div>
+  </section>
+
+  <!-- ========== ภาพรวม ========== -->
+  <section class="view" id="v-dash">
+    <div class="sec-h"><h2>ภาพรวม</h2></div>
+    <div class="subtabs"><button class="on" data-sub="day">รายวัน</button><button data-sub="month">รายเดือน</button></div>
+    <div id="dash-day">
+      <div class="toolbar"><input type="date" class="inp" id="day-pick"><span class="muted small" id="day-note"></span></div>
+      <div class="grid g4m" id="day-kpi" style="margin-bottom:12px"></div>
+      <div class="card" id="day-list"></div>
+    </div>
+    <div id="dash-month" style="display:none">
+      <div class="toolbar"><input type="month" class="inp" id="month-pick"><span class="muted small" id="month-note"></span></div>
+      <div class="grid g4m" id="month-kpi" style="margin-bottom:12px"></div>
+      <div class="grid g2" id="month-points"></div>
+      <div class="card" style="margin-top:12px">
+        <h3 style="font-size:16px;margin-bottom:8px">สถิติการขาดบันทึก</h3>
+        <div id="miss-table"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== รายงาน ========== -->
+  <section class="view" id="v-report">
+    <div class="no-print">
+      <div class="sec-h"><h2>รายงานประจำเดือน</h2></div>
+      <div class="card">
+        <div class="toolbar" style="margin-bottom:10px">
+          <span class="lbl" style="margin:0">เดือน</span><input type="month" class="inp" id="rep-month">
+        </div>
+        <span class="lbl">จุดตรวจ</span>
+        <div class="pchecks" id="rep-points"></div>
+        <button class="btn block" id="btn-print">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
+        <div class="note">กดปุ่มด้านบน แล้วเลือกเครื่องพิมพ์ หรือเลือก <b>“บันทึกเป็น PDF / Save as PDF”</b> เพื่อดาวน์โหลดไฟล์ · ตั้งค่ากระดาษ A4 แนวนอน</div>
+      </div>
+    </div>
+    <div class="pages" id="pages"></div>
+    <div class="qr-wrap" style="margin-top:22px">
+      <div class="card">
+        <div class="sec-h no-print" style="margin-top:0"><h2>QR Code ติดหน้าจุดตรวจ</h2><button class="btn ghost" id="btn-qr">🖨️ พิมพ์ QR</button></div>
+        <p class="muted small no-print" style="margin-top:0">สแกนแล้วเข้าหน้าบันทึกของจุดนั้นทันที</p>
+        <div class="qrgrid" id="qrgrid"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="on" data-view="record"><span class="i">📷</span>บันทึก</button>
+  <button data-view="dash"><span class="i">📊</span>ภาพรวม</button>
+  <button data-view="report"><span class="i">🖨️</span>รายงาน</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="modal-body"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>var INIT = (function(){var q=new URLSearchParams(location.search);return {p:q.get('p')||'',v:q.get('v')||''};})();</script>
+<script>
+/* ================== ตัวช่วยทั่วไป ================== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* เรียกเซิร์ฟเวอร์: ใน Apps Script ใช้ google.script.run · บน GitHub Pages ส่ง POST ไปที่ TEMPLOG_API (config.js) */
+const API_URL = window.TEMPLOG_API || '';
+const api = (fn, ...args) => API_URL
+  ? fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn, args }) }) // ไม่ใส่ header เพื่อไม่ให้เกิด CORS preflight
+      .then(r => r.json()).then(j => { if (!j.ok) throw new Error(j.error); return j.result; })
+  : new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(e))[fn](...args));
+const errMsg = e => String((e && e.message) || e).replace(/^Error:\s*/, '').replace(/^Exception:\s*/, '');
+const TH_M = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const thDate = ymd => { const [y,m,d] = ymd.split('-').map(Number); return `${d} ${TH_MS[m-1]} ${y+543}`; };
+const fmt1 = v => v == null || isNaN(v) ? '–' : (Math.round(v*10)/10).toFixed(1);
+let toastT;
+function toast(msg, err) { const t = $('#toast'); t.textContent = msg; t.className = 'toast on' + (err ? ' err' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 3200); }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+/* เวลาไทยตามนาฬิกาเซิร์ฟเวอร์ */
+let clockOffset = 0;
+function bkkNow() { return new Date(Date.now() + clockOffset); }
+function bkkParts(d = bkkNow()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(d).map(x => [x.type, x.value]));
+  const hh = p.hour === '24' ? '00' : p.hour;
+  return { ymd: `${p.year}-${p.month}-${p.day}`, hm: `${hh}:${p.minute}` };
+}
+
+/* ================== สถานะ ================== */
+let B = null;               // ข้อมูลตั้งต้น
+let todayRows = [];         // บันทึกของวันนี้
+const ICON = { FRIDGE: '❄️', DRUG: '💊', SUPPLY: '🩹', ROOM: '📦' };
+const pIcon = p => ICON[p.id] || ICON[p.type];
+const crit = p => p.type === 'ROOM' ? `เกณฑ์ ${p.minT}–${p.maxT} °C · ${p.minRH}–${p.maxRH} %RH` : `เกณฑ์ ${p.minT}–${p.maxT} °C`;
+const findRec = (rows, date, pid, slot) => rows.find(r => r.date === date && r.pointId === pid && r.slot === slot);
+
+function slotStatus(date, slot, rec) {
+  if (rec) return rec.out ? 'out' : (rec.late ? 'late' : 'ok');
+  const { ymd, hm } = bkkParts();
+  if (date < ymd) return 'missing';
+  if (date > ymd) return 'future';
+  if (hm < slot.start) return 'upcoming';
+  if (hm <= slot.end) return 'open';
+  return 'missing';
+}
+const ST_LABEL = { ok: '✓', late: '✓ ล่าช้า', out: '⚠ ผิดเกณฑ์', open: '⏳ รอบันทึก', upcoming: 'ยังไม่ถึงเวลา', future: '–', missing: '✕ ขาดบันทึก' };
+function chipHtml(slot, st, rec, clickable) {
+  const v = rec ? ` ${fmt1(rec.temp)}°${rec.rh != null ? ' · ' + Math.round(rec.rh) + '%' : ''}` : '';
+  const lab = rec ? (st === 'out' ? '⚠' : '✓') + v + (st === 'late' ? ' (ล่าช้า)' : '') : ST_LABEL[st];
+  const inner = `<span style="opacity:.75">${esc(slot.label)}</span> ${esc(lab)}`;
+  return clickable && rec
+    ? `<button type="button" class="chip click st-${st}" data-rec="${esc(rec.date + '|' + rec.pointId + '|' + rec.slot)}">${inner}</button>`
+    : `<span class="chip st-${st}">${inner}</span>`;
+}
+
+/* ================== เริ่มต้น ================== */
+async function boot() {
+  try {
+    B = await api('getBootstrap');
+    clockOffset = B.now - Date.now();
+    $('#dept').textContent = B.settings.department;
+    tick(); setInterval(tick, 20000);
+    const banner = [];
+    if (!B.settings.aiReady) banner.push('ยังไม่ได้ตั้งค่า AI อ่านตัวเลข — ต้องกรอกค่าเอง');
+    $('#setup-banner').innerHTML = banner.length ? `<div class="banner">⚙️ ${banner.map(esc).join('<br>⚙️ ')}</div>` : '';
+    initReport();
+    await loadToday();
+    const v = INIT.v; if (v && ['dash', 'report'].includes(v)) switchView(v);
+    if (INIT.p) { const p = B.points.find(x => x.id === INIT.p && x.active); if (p) openForm(p); }
+  } catch (e) {
+    $('#points').innerHTML = `<div class="card empty">โหลดข้อมูลไม่สำเร็จ: ${esc(errMsg(e))}<br><br><button class="btn" onclick="location.reload()">ลองใหม่</button></div>`;
+  }
+}
+function tick() {
+  const { ymd, hm } = bkkParts();
+  $('#clock').innerHTML = `${hm} น.<br><span style="font-size:12px;opacity:.75">${thDate(ymd)}</span>`;
+  $('#rec-date').textContent = 'วันนี้ ' + thDate(ymd);
+}
+async function loadToday() {
+  todayRows = await api('getReadingsForDate', bkkParts().ymd);
+  renderPoints();
+}
+function renderPoints() {
+  const { ymd } = bkkParts();
+  $('#points').innerHTML = B.points.filter(p => p.active).map(p => {
+    const chips = B.slots[p.type].map(sl => { const r = findRec(todayRows, ymd, p.id, sl.id); return chipHtml(sl, slotStatus(ymd, sl, r), r); }).join('');
+    return `<div class="card point ${p.type}" role="button" tabindex="0" data-pid="${esc(p.id)}"><div class="picon">${pIcon(p)}</div>
+      <div><h3>${esc(p.name)}</h3><div class="crit">${esc(crit(p))}</div><div class="chips">${chips}</div></div><span class="arrow">›</span></div>`;
+  }).join('');
+  $$('#points .point').forEach(b => {
+    b.onclick = () => openForm(B.points.find(p => p.id === b.dataset.pid));
+    b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.onclick(); } };
+  });
+}
+
+/* ================== ฟอร์มบันทึก ================== */
+let F = null; // สถานะฟอร์ม
+function openForm(p) {
+  const { ymd, hm } = bkkParts();
+  const slots = B.slots[p.type];
+  const pick = slots.find(s => !findRec(todayRows, ymd, p.id, s.id) && hm >= s.start && hm <= s.end)
+            || slots.find(s => !findRec(todayRows, ymd, p.id, s.id) && hm >= s.start);
+  F = { p, slot: pick ? pick.id : null, photo: null, ai: null, aiBusy: false };
+  const savedStaff = lsGet('templog_staff') || '';
+  const slotBtns = slots.map(s => {
+    const r = findRec(todayRows, ymd, p.id, s.id);
+    const early = hm < s.start;
+    const sub = r ? `บันทึกแล้ว ${r.time} น. · ${esc(r.staffName)}` : early ? `เริ่ม ${s.start} น.` : `${s.start}–${s.end} น.${hm > s.end ? ' (เลยเวลา)' : ''}`;
+    return `<button type="button" data-slot="${s.id}" ${r || early ? 'disabled' : ''} class="${F.slot === s.id ? 'on' : ''}"><b>รอบ${esc(s.label)}</b><span>${sub}</span></button>`;
+  }).join('');
+  const isRoom = p.type === 'ROOM';
+  $('#rec-form').innerHTML = `
+    <button class="back" id="f-back">‹ กลับ</button>
+    <div class="form-h ${p.type}"><div class="picon">${pIcon(p)}</div><div><h2 style="font-size:20px">${esc(p.name)}</h2><div class="muted small">${esc(crit(p))}</div></div></div>
+    <div class="card">
+      <div class="step"><span class="lbl">1. รอบการบันทึก</span><div class="seg" id="f-slots">${slotBtns}</div>
+        ${F.slot ? '' : '<p class="muted small" style="margin:8px 0 0">ไม่มีรอบที่บันทึกได้ในตอนนี้</p>'}</div>
+      <div class="step"><span class="lbl">2. รหัสพนักงานผู้บันทึก</span>
+        <input class="inp" id="f-staff" value="${esc(savedStaff)}" placeholder="พิมพ์รหัสพนักงาน" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <div id="f-staffname" class="muted small" style="margin-top:6px"></div></div>
+      <div class="step"><span class="lbl">3. ถ่ายรูปหน้าจอเทอร์โมมิเตอร์ <span class="muted small" style="font-weight:400">· ใช้ให้ AI อ่านค่า ระบบไม่เก็บรูป</span></span>
+        <input type="file" id="f-file" accept="image/*" capture="environment" hidden>
+        <div id="f-photo"><label class="shot" for="f-file"><span class="big">📷</span><b>แตะเพื่อถ่ายรูป</b><span class="small">ถ่ายให้เห็นตัวเลขชัด ไม่มีแสงสะท้อน</span></label></div>
+        <div id="f-ai"></div></div>
+      <div class="step"><span class="lbl">4. ตรวจสอบค่าที่อ่านได้</span>
+        <div class="vals ${isRoom ? 'two' : ''}">
+          <div class="valbox" id="vb-t"><div class="rng">อุณหภูมิ</div><div class="u"><input id="f-t" inputmode="decimal" placeholder="—" autocomplete="off"><span class="unit">°C</span></div><div class="rng">เกณฑ์ ${p.minT}–${p.maxT}</div></div>
+          ${isRoom ? `<div class="valbox" id="vb-rh"><div class="rng">ความชื้น</div><div class="u"><input id="f-rh" inputmode="decimal" placeholder="—" autocomplete="off"><span class="unit">%RH</span></div><div class="rng">เกณฑ์ ${p.minRH}–${p.maxRH}</div></div>` : ''}
+        </div>
+        <div id="f-out" style="display:none" class="alert"><b>⚠ ค่าผิดเกณฑ์</b> — แจ้ง Incharge / หัวหน้าเวร และหน่วยงานเครื่องมือแพทย์ แล้วกรอกข้อมูลด้านล่าง
+          <div style="margin-top:10px"><span class="lbl" style="color:#7f1d1d">ความผิดปกติที่พบ</span><textarea class="inp" id="f-issue" placeholder="เช่น อุณหภูมิสูงขึ้นหลังเปิดตู้นาน / ตู้ไม่เย็น"></textarea></div>
+          <div style="margin-top:8px"><span class="lbl" style="color:#7f1d1d">การแก้ไขที่ทำแล้ว</span><textarea class="inp" id="f-action" placeholder="เช่น ปิดประตูตู้ ตรวจซ้ำหลัง 5 นาที / ย้ายยาไปตู้ 2 และแจ้งช่าง"></textarea></div>
+        </div>
+        <label class="confirm"><input type="checkbox" id="f-ok"><span>ฉันตรวจสอบแล้วว่าตัวเลขตรงกับหน้าจอเทอร์โมมิเตอร์</span></label>
+      </div>
+      <button class="btn block" id="f-save" disabled>บันทึก</button>
+    </div>`;
+  $('#rec-list').style.display = 'none'; $('#rec-form').style.display = 'block'; window.scrollTo(0, 0);
+  $('#f-back').onclick = closeForm;
+  $$('#f-slots button').forEach(b => b.onclick = () => { F.slot = b.dataset.slot; $$('#f-slots button').forEach(x => x.classList.toggle('on', x === b)); validate(); });
+  $('#f-staff').oninput = () => { F.staff = null; clearTimeout(F.staffTimer); F.staffTimer = setTimeout(checkStaff, 500); validate(); };
+  if (savedStaff) checkStaff();
+  $('#f-file').onchange = onPhoto;
+  ['#f-t', '#f-rh', '#f-issue', '#f-action'].forEach(s => { const el = $(s); if (el) el.oninput = validate; });
+  $('#f-ok').onchange = validate;
+  $('#f-save').onclick = save;
+  validate();
+}
+/** ตรวจรหัสพนักงานกับชีต Staff แล้วแสดงชื่อให้ผู้บันทึกยืนยันว่าเป็นตัวเอง */
+async function checkStaff() {
+  const id = $('#f-staff').value.trim(), box = $('#f-staffname');
+  if (!id) { box.textContent = ''; return; }
+  box.style.color = ''; box.textContent = 'กำลังตรวจรหัส…';
+  try {
+    const r = await api('lookupStaff', id);
+    if (!F || $('#f-staff').value.trim() !== id) return;
+    if (r.ok) {
+      F.staff = r; lsSet('templog_staff', r.id);
+      box.style.color = 'var(--ok)'; box.innerHTML = `✓ <b>${esc(r.name)}</b>`;
+    } else { box.style.color = 'var(--bad)'; box.textContent = 'ไม่พบรหัสนี้ — ตรวจรหัสอีกครั้ง หรือแจ้งหัวหน้า'; }
+  } catch (e) { if (F) { box.style.color = 'var(--bad)'; box.textContent = 'ตรวจรหัสไม่สำเร็จ ลองใหม่อีกครั้ง'; } }
+  validate();
+}
+function closeForm() { $('#rec-form').style.display = 'none'; $('#rec-list').style.display = 'block'; F = null; renderPoints(); }
+
+async function onPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const dataUrl = await compressImage(file, 1280, 0.82);
+    F.photo = dataUrl; F.ai = null;
+    $('#f-photo').innerHTML = `<div class="preview"><img src="${dataUrl}" alt="รูปเทอร์โมมิเตอร์"><label class="retake" for="f-file">📷 ถ่ายใหม่</label></div>`;
+    e.target.value = '';
+    runAI();
+  } catch (err) { toast('อ่านรูปไม่สำเร็จ ลองถ่ายใหม่', true); }
+  validate();
+}
+function compressImage(file, max, q) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+async function runAI() {
+  if (!B.settings.aiReady) { $('#f-ai').innerHTML = `<div class="ai warn">✍️ กรอกตัวเลขจากหน้าจอด้วยตัวเองในข้อ 4</div>`; return; }
+  F.aiBusy = true; validate();
+  $('#f-ai').innerHTML = `<div class="ai wait"><div class="spin"></div><div>AI กำลังอ่านตัวเลขจากรูป…</div></div>`;
+  const photoAtStart = F.photo;
+  try {
+    const r = await api('readThermometer', F.photo.split(',')[1], 'image/jpeg', F.p.type);
+    if (!F || F.photo !== photoAtStart) return;
+    if (r.ok && r.temperature != null) {
+      F.ai = r;
+      $('#f-t').value = r.temperature;
+      if ($('#f-rh') && r.humidity != null) $('#f-rh').value = r.humidity;
+      const cls = r.confidence === 'high' ? 'good' : 'warn';
+      const txt = r.confidence === 'high' ? 'AI อ่านค่าได้ — <b>ตรวจให้ตรงกับหน้าจออีกครั้ง</b>' : `AI ไม่แน่ใจ${r.note ? ' (' + esc(r.note) + ')' : ''} — <b>ตรวจและแก้ตัวเลขให้ถูกต้อง</b>`;
+      $('#f-ai').innerHTML = `<div class="ai ${cls}">${r.confidence === 'high' ? '🤖' : '⚠️'} <div>${txt}</div></div>`;
+    } else {
+      F.ai = null;
+      $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>${esc(r.error || 'AI อ่านค่าไม่ได้')} — กรุณากรอกตัวเลขเอง</div></div>`;
+    }
+  } catch (e) {
+    $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>AI อ่านค่าไม่สำเร็จ — กรุณากรอกตัวเลขเอง</div></div>`;
+  } finally { if (F) { F.aiBusy = false; validate(); } }
+}
+function num(el) { if (!el) return null; const v = el.value.trim().replace(',', '.'); return v === '' || isNaN(Number(v)) ? null : Number(v); }
+function validate() {
+  if (!F) return;
+  const p = F.p, t = num($('#f-t')), rh = num($('#f-rh'));
+  const tBad = t != null && (t < p.minT || t > p.maxT), rhBad = p.type === 'ROOM' && rh != null && (rh < p.minRH || rh > p.maxRH);
+  $('#vb-t').className = 'valbox' + (t == null ? '' : tBad ? ' bad' : ' good');
+  if ($('#vb-rh')) $('#vb-rh').className = 'valbox' + (rh == null ? '' : rhBad ? ' bad' : ' good');
+  const out = tBad || rhBad;
+  $('#f-out').style.display = out ? 'block' : 'none';
+  const ready = F.slot && F.staff && (F.photo || !B.settings.aiReady) && !F.aiBusy && t != null &&
+    (p.type !== 'ROOM' || rh != null) && $('#f-ok').checked && (!out || ($('#f-issue').value.trim() && $('#f-action').value.trim()));
+  $('#f-save').disabled = !ready;
+}
+async function save() {
+  const btn = $('#f-save'); btn.disabled = true; btn.innerHTML = '<div class="spin" style="border-top-color:#fff"></div> กำลังบันทึก…';
+  const p = F.p;
+  const payload = {
+    pointId: p.id, slot: F.slot, temp: num($('#f-t')), rh: num($('#f-rh')),
+    aiTemp: F.ai ? F.ai.temperature : null, aiRh: F.ai ? F.ai.humidity : null, aiConf: F.ai ? F.ai.confidence : '',
+    staffId: F.staff.id,
+    issue: $('#f-issue') ? $('#f-issue').value : '', action: $('#f-action') ? $('#f-action').value : ''
+  };
+  try {
+    const r = await api('saveReading', payload);
+    const slot = B.slots[p.type].find(s => s.id === F.slot);
+    $('#rec-form').innerHTML = `<div class="card done ${r.out ? 'bad' : ''}"><div class="ic">${r.out ? '⚠️' : '✅'}</div>
+      <h2 style="font-size:20px">บันทึกเรียบร้อย</h2>
+      <p class="muted" style="margin:6px 0 2px">${esc(p.name)} · รอบ${esc(slot.label)} · ${r.time} น.${r.late ? ' (ล่าช้า)' : ''}</p>
+      <p style="font:600 30px var(--head);margin:6px 0">${fmt1(payload.temp)} °C${p.type === 'ROOM' ? ` · ${fmt1(payload.rh)} %RH` : ''}</p>
+      <p class="muted small">ผู้บันทึก: ${esc(r.staffName)}</p>
+      ${r.out ? `<p class="small" style="color:var(--bad)">ค่าผิดเกณฑ์ — กรุณาแจ้ง Incharge / หัวหน้าเวรทันที</p>` : ''}
+      <button class="btn block" id="f-next">บันทึกจุดถัดไป</button></div>`;
+    $('#f-next').onclick = closeForm;
+    todayRows = await api('getReadingsForDate', bkkParts().ymd);
+  } catch (e) {
+    toast(errMsg(e), true);
+    btn.innerHTML = 'บันทึก'; validate();
+  }
+}
+
+/* ================== ภาพรวม (Dashboard) ================== */
+function switchView(v) {
+  $$('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v));
+  $$('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  window.scrollTo(0, 0);
+  if (v === 'record' && B) loadToday().catch(() => {});
+  if (v === 'dash' && B) { loadDay(); if ($('#dash-month').style.display !== 'none') loadMonth(); }
+  if (v === 'report' && B) buildReport();
+}
+$$('.tabbar button').forEach(b => b.onclick = () => switchView(b.dataset.view));
+$$('.subtabs button').forEach(b => b.onclick = () => {
+  $$('.subtabs button').forEach(x => x.classList.toggle('on', x === b));
+  const m = b.dataset.sub === 'month';
+  $('#dash-day').style.display = m ? 'none' : 'block'; $('#dash-month').style.display = m ? 'block' : 'none';
+  m ? loadMonth() : loadDay();
+});
+
+let dayRows = [];
+async function loadDay() {
+  const pick = $('#day-pick'); const { ymd } = bkkParts();
+  if (!pick.value) { pick.value = ymd; pick.max = ymd; }
+  $('#day-list').innerHTML = '<div class="loading">กำลังโหลด…</div>';
+  dayRows = await api('getReadingsForDate', pick.value);
+  const date = pick.value; const c = { ok: 0, out: 0, missing: 0, wait: 0 };
+  const rows = B.points.filter(p => p.active).map(p => {
+    const chips = B.slots[p.type].map(sl => {
+      const r = findRec(dayRows, date, p.id, sl.id), st = slotStatus(date, sl, r);
+      if (st === 'ok' || st === 'late') c.ok++; else if (st === 'out') c.out++; else if (st === 'missing') c.missing++; else c.wait++;
+      return chipHtml(sl, st, r, true);
+    }).join('');
+    return `<div class="dayrow"><div class="nm">${pIcon(p)} ${esc(p.name)}</div><div class="chips">${chips}</div></div>`;
+  });
+  $('#day-list').innerHTML = rows.join('');
+  $('#day-kpi').innerHTML = kpi(c.ok + c.out, 'บันทึกแล้ว', 'ok') + kpi(c.out, 'ผิดเกณฑ์', c.out ? 'bad' : '') + kpi(c.missing, 'ขาดบันทึก', c.missing ? 'miss' : '') + kpi(c.wait, 'รอบันทึก', '');
+  $('#day-note').textContent = date === ymd ? 'อัปเดต ' + bkkParts().hm + ' น.' : '';
+  $$('#day-list .chip.click').forEach(ch => ch.onclick = () => showRec(dayRows, ch.dataset.rec));
+}
+$('#day-pick').onchange = loadDay;
+const kpi = (n, l, cls) => `<div class="card kpi ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+
+function showRec(rows, key) {
+  const [date, pid, slotId] = key.split('|');
+  const r = findRec(rows, date, pid, slotId); if (!r) return;
+  const p = B.points.find(x => x.id === pid), sl = B.slots[p.type].find(s => s.id === slotId);
+  $('#modal-body').innerHTML = `<div class="sec-h" style="margin-top:0"><h2 style="font-size:18px">${pIcon(p)} ${esc(p.name)} · รอบ${esc(sl.label)}</h2><button class="back" id="m-x">ปิด ✕</button></div>
+    <dl class="kv"><dt>วันที่ / เวลา</dt><dd>${thDate(r.date)} · ${esc(r.time)} น.${r.late ? ' (ล่าช้า)' : ''}</dd>
+    <dt>อุณหภูมิ</dt><dd style="color:${r.out ? 'var(--bad)' : 'inherit'}">${fmt1(r.temp)} °C</dd>
+    ${r.rh != null ? `<dt>ความชื้น</dt><dd>${fmt1(r.rh)} %RH</dd>` : ''}
+    <dt>ผู้บันทึก</dt><dd>${esc(r.staffName)}</dd>
+    <dt>ที่มาของค่า</dt><dd>${r.edited === 'MANUAL' ? 'กรอกเอง' : r.edited === 'Y' ? 'AI อ่าน แล้วพนักงานแก้ไข' : 'AI อ่าน + พนักงานยืนยัน'}</dd>
+    ${r.out ? `<dt>ความผิดปกติ</dt><dd>${esc(r.issue)}</dd><dt>การแก้ไข</dt><dd>${esc(r.action)}</dd>` : ''}</dl>`;
+  $('#modal').classList.add('on');
+  $('#m-x').onclick = () => $('#modal').classList.remove('on');
+}
+$('#modal').onclick = e => { if (e.target.id === 'modal') $('#modal').classList.remove('on'); };
+
+/* ----- รายเดือน ----- */
+const monthCache = {};
+async function getMonth(ym, force) {
+  if (!monthCache[ym] || force) monthCache[ym] = await api('getMonthData', ym);
+  return monthCache[ym];
+}
+function daysIn(ym) { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); }
+function monthStats(ym, rows) {
+  const n = daysIn(ym), res = {}, missList = [];
+  B.points.filter(p => p.active).forEach(p => {
+    const mine = rows.filter(r => r.pointId === p.id);
+    const t = mine.map(r => r.temp).filter(v => v != null), h = mine.map(r => r.rh).filter(v => v != null);
+    const s = { p, n: mine.length, due: 0, miss: 0, late: mine.filter(r => r.late).length, out: mine.filter(r => r.out).length, missBySlot: {},
+      tAvg: t.length ? t.reduce((a, b) => a + b, 0) / t.length : null, tMin: t.length ? Math.min(...t) : null, tMax: t.length ? Math.max(...t) : null,
+      hAvg: h.length ? h.reduce((a, b) => a + b, 0) / h.length : null, hMin: h.length ? Math.min(...h) : null, hMax: h.length ? Math.max(...h) : null, rows: mine };
+    for (let d = 1; d <= n; d++) {
+      const date = `${ym}-${String(d).padStart(2, '0')}`;
+      B.slots[p.type].forEach(sl => {
+        const r = findRec(rows, date, p.id, sl.id), st = slotStatus(date, sl, r);
+        if (r || st === 'missing') s.due++;
+        if (st === 'missing') { s.miss++; s.missBySlot[sl.label] = (s.missBySlot[sl.label] || 0) + 1; missList.push({ date, p, sl }); }
+      });
+    }
+    res[p.id] = s;
+  });
+  return { res, missList };
+}
+async function loadMonth() {
+  const mp = $('#month-pick'); const { ymd } = bkkParts();
+  if (!mp.value) { mp.value = ymd.slice(0, 7); mp.max = ymd.slice(0, 7); }
+  const ym = mp.value;
+  $('#month-points').innerHTML = '<div class="loading">กำลังโหลด…</div>';
+  const data = await getMonth(ym, ym === ymd.slice(0, 7));
+  const { res, missList } = monthStats(ym, data.readings);
+  const all = Object.values(res);
+  const due = all.reduce((a, s) => a + s.due, 0), done = all.reduce((a, s) => a + s.n, 0);
+  const miss = all.reduce((a, s) => a + s.miss, 0), out = all.reduce((a, s) => a + s.out, 0), late = all.reduce((a, s) => a + s.late, 0);
+  $('#month-kpi').innerHTML = kpi(due ? Math.round(done / due * 1000) / 10 + '%' : '–', 'ความครบถ้วน', 'ok') +
+    kpi(miss, 'ขาดบันทึก (ครั้ง)', miss ? 'miss' : '') + kpi(out, 'ผิดเกณฑ์ (ครั้ง)', out ? 'bad' : '') + kpi(late, 'บันทึกล่าช้า (ครั้ง)', '');
+  $('#month-note').textContent = `${TH_M[+ym.slice(5) - 1]} ${+ym.slice(0, 4) + 543} · บันทึกแล้ว ${done} จาก ${due} รายการที่ถึงกำหนด`;
+  $('#month-points').innerHTML = all.map(s => {
+    const p = s.p, room = p.type === 'ROOM';
+    return `<div class="card pcard"><h3>${pIcon(p)} ${esc(p.name)} <span class="chip ${s.miss ? 'st-missing' : 'st-ok'}" style="margin-left:auto">${s.due ? Math.round(s.n / s.due * 100) : 0}% ครบ</span></h3>
+      <div class="stats"><div><b>${fmt1(s.tAvg)}</b><span>เฉลี่ย °C</span></div><div><b>${fmt1(s.tMin)}</b><span>ต่ำสุด °C</span></div><div><b>${fmt1(s.tMax)}</b><span>สูงสุด °C</span></div>
+      ${room ? `<div><b>${fmt1(s.hAvg)}</b><span>เฉลี่ย %RH</span></div><div><b>${fmt1(s.hMin)}</b><span>ต่ำสุด %RH</span></div><div><b>${fmt1(s.hMax)}</b><span>สูงสุด %RH</span></div>` : ''}</div>
+      ${miniChart(ym, s, 'temp', p.minT, p.maxT, '°C')}${room ? miniChart(ym, s, 'rh', p.minRH, p.maxRH, '%RH') : ''}
+      <div class="small muted" style="margin-top:6px">ผิดเกณฑ์ ${s.out} · ขาดบันทึก ${s.miss}${Object.keys(s.missBySlot).length ? ' (' + Object.entries(s.missBySlot).map(([k, v]) => `รอบ${k} ${v}`).join(', ') + ')' : ''} · ล่าช้า ${s.late}</div></div>`;
+  }).join('');
+  $('#miss-table').innerHTML = `<table class="list"><thead><tr><th>จุดตรวจ</th>${['เช้า', 'เย็น', 'เที่ยง'].map(l => `<th>รอบ${l}</th>`).join('')}<th>รวม</th><th>% ครบ</th></tr></thead><tbody>
+    ${all.map(s => `<tr><td>${esc(s.p.name)}</td>${['เช้า', 'เย็น', 'เที่ยง'].map(l => `<td>${B.slots[s.p.type].some(x => x.label === l) ? (s.missBySlot[l] || 0) : '–'}</td>`).join('')}<td><b>${s.miss}</b></td><td>${s.due ? Math.round(s.n / s.due * 100) : 0}%</td></tr>`).join('')}</tbody></table>
+    ${missList.length ? `<details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:600">ดูรายการวันที่ขาดบันทึก (${missList.length})</summary>
+    <table class="list" style="margin-top:6px"><tbody>${missList.map(m => `<tr><td>${thDate(m.date)}</td><td>${esc(m.p.name)}</td><td>รอบ${esc(m.sl.label)}</td></tr>`).join('')}</tbody></table></details>` : '<p class="small muted" style="margin:8px 0 0">ไม่มีรายการขาดบันทึก 🎉</p>'}`;
+}
+$('#month-pick').onchange = loadMonth;
+
+/* กราฟเส้นรายเดือน (SVG) */
+function miniChart(ym, s, key, lo, hi, unit) {
+  const n = daysIn(ym), W = 560, H = 150, L = 34, R = 8, T = 10, Bm = 22;
+  const slots = B.slots[s.p.type], k = slots.length;
+  const pts = s.rows.filter(r => r[key] != null).map(r => {
+    const d = +r.date.slice(8), si = slots.findIndex(x => x.id === r.slot);
+    return { x: d - 1 + (si + 0.5) / k, v: r[key], out: r[key] < lo || r[key] > hi };
+  }).sort((a, b) => a.x - b.x);
+  const vals = pts.map(q => q.v).concat([lo, hi]);
+  let mn = Math.min(...vals), mx = Math.max(...vals); const pad = (mx - mn) * 0.15 || 1; mn -= pad; mx += pad;
+  const X = x => L + (x / n) * (W - L - R), Y = v => T + (1 - (v - mn) / (mx - mn)) * (H - T - Bm);
+  const ticks = [lo, hi];
+  let g = `<rect x="${L}" y="${Y(hi)}" width="${W - L - R}" height="${Y(lo) - Y(hi)}" fill="#e3f5e8"/>`;
+  ticks.forEach(v => g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#15803d" stroke-dasharray="4 3" stroke-width="1"/><text x="${L - 5}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#4a6274">${v}</text>`);
+  [1, 5, 10, 15, 20, 25, n].forEach(d => g += `<text x="${X(d - 0.5)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#4a6274">${d}</text>`);
+  if (pts.length) g += `<polyline fill="none" stroke="${key === 'temp' ? '#2563eb' : '#b45309'}" stroke-width="1.8" stroke-linejoin="round" points="${pts.map(q => X(q.x).toFixed(1) + ',' + Y(q.v).toFixed(1)).join(' ')}"/>` +
+    pts.map(q => `<circle cx="${X(q.x).toFixed(1)}" cy="${Y(q.v).toFixed(1)}" r="${q.out ? 3.6 : 2.4}" fill="${q.out ? '#c81e1e' : (key === 'temp' ? '#2563eb' : '#b45309')}"/>`).join('');
+  else g += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="13" fill="#4a6274">ยังไม่มีข้อมูล</text>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="กราฟ${unit}"><text x="${L}" y="9" font-size="11" fill="#4a6274" font-weight="600">${unit === '°C' ? 'อุณหภูมิ' : 'ความชื้น'} (${unit}) · แถบเขียว = ช่วงปกติ</text>${g}</svg>`;
+}
+
+/* ================== รายงาน PDF ================== */
+function initReport() {
+  const { ymd } = bkkParts();
+  $('#rep-month').value = ymd.slice(0, 7); $('#rep-month').max = ymd.slice(0, 7);
+  $('#rep-points').innerHTML = B.points.filter(p => p.active).map(p => `<label><input type="checkbox" value="${esc(p.id)}" checked> ${pIcon(p)} ${esc(p.name)}</label>`).join('');
+  $('#rep-month').onchange = buildReport;
+  $$('#rep-points input').forEach(i => i.onchange = buildReport);
+  $('#btn-print').onclick = () => doPrint('report');
+  $('#btn-qr').onclick = () => doPrint('qr');
+  renderQR();
+}
+async function doPrint(kind) {
+  if (kind === 'report') await buildReport();
+  document.body.dataset.print = kind;
+  setTimeout(() => { window.print(); }, 150);
+}
+window.addEventListener('afterprint', () => { delete document.body.dataset.print; });
+
+let repBuilding = null;
+async function buildReport() {
+  const ym = $('#rep-month').value; if (!ym) return;
+  const ids = $$('#rep-points input:checked').map(i => i.value);
+  $('#pages').innerHTML = '<div class="card loading no-print">กำลังสร้างรายงาน…</div>';
+  const job = (async () => {
+    const data = await getMonth(ym, ym === bkkParts().ymd.slice(0, 7));
+    const pts = B.points.filter(p => ids.includes(p.id));
+    if (!pts.length) { $('#pages').innerHTML = '<div class="card empty no-print">เลือกจุดตรวจอย่างน้อย 1 จุด</div>'; return; }
+    $('#pages').innerHTML = pts.map(p => `<div class="page">${p.type === 'FRIDGE' ? fridgePage(ym, p, data.readings) : roomPage(ym, p, data.readings)}</div>`).join('');
+    // ฟอนต์ที่ใช้เฉพาะในรายงาน ต้องสั่งโหลดก่อนวัดความยาวชื่อ
+    try { await Promise.all(['Tinos', 'Taviraj', 'Arimo'].flatMap(f => [`10px ${f}`, `700 10px ${f}`]).map(f => document.fonts.load(f, 'Aกข'))); await document.fonts.ready; } catch (e) {}
+    fitNames();
+  })();
+  repBuilding = job; return job;
+}
+
+/* ช่วงค่าในตาราง (ตามแบบฟอร์ม) */
+const FRIDGE_BANDS = [
+  { l: '> 11.0', lo: 11, hi: 99 }, { l: '10.0 - 10.9', lo: 10, hi: 10.9 }, { l: '9.0 - 9.9', lo: 9, hi: 9.9 }, { l: '8.0 - 8.9', lo: 8, hi: 8.9 },
+  { l: '7.0 - 7.9', lo: 7, hi: 7.9 }, { l: '6.0 - 6.9', lo: 6, hi: 6.9 }, { l: '5.0 - 5.9', lo: 5, hi: 5.9 }, { l: '4.0 - 4.9', lo: 4, hi: 4.9 },
+  { l: '3.0 - 3.9', lo: 3, hi: 3.9 }, { l: '2.0 - 2.9', lo: 2, hi: 2.9 }, { l: '1.0 - 1.9', lo: 1, hi: 1.9 }, { l: '< 1.00', lo: -99, hi: 0.99 }];
+const fridgeBand = v => v >= 11 ? 0 : v < 1 ? 11 : 10 - Math.floor(v);
+const RH_BANDS = [
+  { l: '> 80', lo: 81, hi: 100 }, { l: '76 - 80', lo: 76, hi: 80 }, { l: '71-75', lo: 71, hi: 75 }, { l: '66 - 70', lo: 66, hi: 70 }, { l: '61- 65', lo: 61, hi: 65 },
+  { l: '56 - 60', lo: 56, hi: 60 }, { l: '51 - 55', lo: 51, hi: 55 }, { l: '40 - 50', lo: 40, hi: 50 }, { l: '30 - 40', lo: 30, hi: 39 }, { l: '20 - 29', lo: 20, hi: 29 }, { l: '< 20', lo: 0, hi: 19 }];
+const rhBand = v => v > 80 ? 0 : v > 75 ? 1 : v > 70 ? 2 : v > 65 ? 3 : v > 60 ? 4 : v > 55 ? 5 : v > 50 ? 6 : v >= 40 ? 7 : v >= 30 ? 8 : v >= 20 ? 9 : 10;
+const RT_BANDS = [
+  { l: '>35.0', lo: 35.1, hi: 99 }, { l: '30.1 - 35.0', lo: 30.1, hi: 35 }, { l: '27.1-30.0', lo: 27.1, hi: 30 }, { l: '24.1 - 27.0', lo: 24.1, hi: 27 },
+  { l: '22.0 - 24.0', lo: 22, hi: 24 }, { l: '20.0 - 21.9', lo: 20, hi: 21.9 }, { l: '17.0 -19.9', lo: 17, hi: 19.9 }, { l: '15.0 - 16.9', lo: 15, hi: 16.9 },
+  { l: '12.0 - 14.9', lo: 12, hi: 14.9 }, { l: '< 12.0', lo: -99, hi: 11.9 }];
+const rtBand = v => v > 35 ? 0 : v > 30 ? 1 : v > 27 ? 2 : v > 24 ? 3 : v >= 22 ? 4 : v >= 20 ? 5 : v >= 17 ? 6 : v >= 15 ? 7 : v >= 12 ? 8 : 9;
+const shaded = (b, lo, hi) => b.hi > hi || b.lo < lo;
+
+/* ฟอนต์ตามแบบฟอร์มเดิม: Times (Tinos) + ไทยแบบมีหัว (Taviraj) · ฟอร์มห้องใช้ Arial (Arimo) ในตาราง */
+const SV = {
+  serif: "Tinos,'Times New Roman',Taviraj,serif",
+  sans: "Arimo,Arial,Sarabun,Tahoma,sans-serif"
+};
+const FORM_CYAN = '#00ffff', FORM_BEIGE = '#eeece1';
+/* โลโก้ BSS จากแบบฟอร์มต้นฉบับ — ใช้เมื่อไม่ได้ตั้ง LOGO_URL ในชีต Settings */
+const BSS_LOGO = 'data:image/png;base64,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';
+const T = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.fs || 11}" ${o.b ? 'font-weight="700"' : ''} text-anchor="${o.a || 'start'}" fill="${o.c || '#000'}" ${o.extra || ''}>${esc(s)}</text>`;
+const Rt = (x, y, w, h, o = {}) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${o.f || 'none'}" stroke="${o.s || 'none'}" stroke-width="${o.sw || 0.8}"/>`;
+const Ln = (x1, y1, x2, y2, w = 0.8) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="${w}"/>`;
+
+function header(title, ym, p, W) {
+  const [y, m] = ym.split('-').map(Number);
+  const logo = `<image href="${esc(B.settings.logoUrl || BSS_LOGO)}" x="88" y="6" height="34" width="88" preserveAspectRatio="xMinYMid meet"/>`;
+  return logo + `<text x="${W / 2}" y="68" font-size="18" font-weight="700" text-anchor="middle" font-family="${SV.serif}">${esc(title)} for Month <tspan text-decoration="underline"> ${esc(TH_M[m - 1])} </tspan> Year <tspan text-decoration="underline"> ${y + 543} </tspan> Department <tspan text-decoration="underline"> ${esc(B.settings.department)} · ${esc(p.name)} </tspan></text>`;
+}
+function footer(code, W, H) {
+  const f = { fs: 9.5, extra: `font-family="${SV.serif}"` };
+  return T(40, H - 18, code, f) + T(W / 2, H - 18, 'หน้า 1/1', { ...f, a: 'middle' }) + T(W - 40, H - 18, 'วันที่บังคับใช้ ' + B.settings.effectiveDate, { ...f, a: 'end' });
+}
+/* ป้ายค่า (pill) */
+function pill(cx, cy, txt, out, maxW) {
+  const w = Math.min(maxW, 7 + String(txt).length * 5.6), h = 12.5, col = out ? '#c81e1e' : '#1d3f8f';
+  return `<rect x="${(cx - w / 2).toFixed(1)}" y="${(cy - h / 2).toFixed(1)}" width="${w.toFixed(1)}" height="${h}" rx="6" fill="#fff" stroke="${col}" stroke-width="1.1"/>` +
+    `<text x="${cx.toFixed(1)}" y="${(cy + 3.6).toFixed(1)}" font-size="9.5" font-weight="700" text-anchor="middle" fill="${col}">${esc(txt)}</text>`;
+}
+const poly = (pts, col = '#1d3f8f') => pts.length > 1 ? `<polyline fill="none" stroke="${col}" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" opacity=".85" points="${pts.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ')}"/>` : '';
+/* ช่องลงชื่อ: ชื่อจริง แนวตั้ง ปรับขนาดอักษรให้พอดีช่องหลังโหลดฟอนต์ */
+const signCell = (x, y, w, h, name) => name ? `<text class="sig" data-cx="${(x + w / 2).toFixed(1)}" data-cy="${(y + h / 2).toFixed(1)}" data-w="${w - 3}" data-h="${h - 6}" font-size="9" text-anchor="middle" transform="rotate(-90 ${(x + w / 2).toFixed(1)} ${(y + h / 2).toFixed(1)})" x="${(x + w / 2).toFixed(1)}" y="${(y + h / 2 + 3).toFixed(1)}">${esc(name)}</text>` : '';
+function fitNames() {
+  $$('#pages text.sig').forEach(t => {
+    const name = t.textContent, cx = +t.dataset.cx, cy = +t.dataset.cy, W = +t.dataset.w, H = +t.dataset.h;
+    // บรรทัดเดียว
+    t.setAttribute('font-size', 10);
+    let len = t.getComputedTextLength();
+    let fs = Math.min(10, 10 * H / len, W * 0.8);
+    if (fs >= 6.8 || !name.includes(' ')) { t.setAttribute('font-size', fs.toFixed(2)); t.setAttribute('y', (cy + fs * 0.35).toFixed(1)); return; }
+    // ชื่อยาว: แยก ชื่อ / นามสกุล เป็น 2 บรรทัด
+    const i = name.indexOf(' '), a = name.slice(0, i), b = name.slice(i + 1);
+    t.textContent = a; t.setAttribute('font-size', 10); const la = t.getComputedTextLength();
+    t.textContent = b; const lb = t.getComputedTextLength();
+    fs = Math.min(10, 10 * H / Math.max(la, lb), W / 2.3);
+    const lh = fs * 1.1;
+    t.textContent = '';
+    t.setAttribute('font-size', fs.toFixed(2));
+    t.setAttribute('y', (cy - lh / 2 + fs * 0.35).toFixed(1));
+    [a, b].forEach((s, k) => { const ts = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); ts.setAttribute('x', cx.toFixed(1)); if (k) ts.setAttribute('dy', lh.toFixed(1)); ts.textContent = s; t.appendChild(ts); });
+  });
+}
+
+/* ---------- หน้าตู้เย็น (FI-NIM-NHS-00-011/1) ---------- */
+function fridgePage(ym, p, rows) {
+  const W = 1123, H = 794, x0 = 28, LV = 26, LB = 74, slots = B.slots.FRIDGE, k = slots.length;
+  const nDays = daysIn(ym), colW = (W - 2 * x0 - LV - LB) / (16 * k);
+  const h1 = 16, h2 = 15, bh = 15.6, nh = 17, sh = 54;
+  let svg = header('Medicine Refrigerator Temperature Record', ym, p, W);
+  const halves = [[1, 15], [16, nDays]];
+  let y0 = 80;
+  halves.forEach(([d1, d2]) => {
+    const nd = d2 - d1 + 1, nc = nd * k, xL = x0 + LV + LB, tw = LV + LB + nc * colW;
+    const yB = y0 + h1 + h2, yN = yB + 12 * bh, yS = yN + nh, yE = yS + sh;
+    // พื้นหลังแถบนอกเกณฑ์
+    FRIDGE_BANDS.forEach((b, i) => { if (shaded(b, p.minT, p.maxT)) svg += Rt(xL, yB + i * bh, nc * colW, bh, { f: FORM_CYAN }); });
+    // ตัวอักษรหัวตาราง
+    svg += T(x0 + (LV + LB) / 2, y0 + (h1 + h2) / 2 + 4, 'Date', { fs: 12, b: 1, a: 'middle' });
+    for (let d = d1; d <= d2; d++) {
+      const cx = xL + (d - d1) * k * colW;
+      svg += T(cx + k * colW / 2, y0 + h1 - 4, d, { fs: 10, b: 1, a: 'middle' });
+      slots.forEach((sl, si) => svg += T(cx + (si + .5) * colW, y0 + h1 + h2 - 4, sl.label, { fs: 9.5, b: 1, a: 'middle' }));
+    }
+    FRIDGE_BANDS.forEach((b, i) => svg += T(xL - 4, yB + i * bh + bh / 2 + 4, b.l, { fs: 10.5, b: 1, a: 'end' }));
+    svg += `<text font-size="12" font-weight="700" text-anchor="middle" transform="translate(${x0 + LV / 2 + 4} ${yB + 6 * bh}) rotate(-90)">Temperature (°C)</text>`;
+    svg += T(xL + nc * colW / 2, yN + nh / 2 + 4, `อุณหภูมิสูงกว่า ${p.maxT} หรือต่ำกว่า ${p.minT} องศาเซลเซียส แจ้ง Incharge และแจ้งหน่วยงานเครื่องมือแพทย์เพื่อแก้ไข และบันทึกการดำเนินการแก้ไขในระบบ`, { fs: 10, b: 1, a: 'middle' });
+    svg += T(x0 + 8, yS + sh / 2 + 4, 'ผู้ตรวจสอบ', { fs: 11, b: 1 });
+    // เส้นตาราง
+    svg += Rt(x0, y0, tw, yE - y0, { s: '#000', sw: 1.6 });
+    svg += Ln(xL, y0, xL, yN, 1.2) + Ln(x0, yB, x0 + tw, yB, 1.2) + Ln(x0 + LV, yB, x0 + LV, yN, 0.8);
+    svg += Ln(xL, y0 + h1, x0 + tw, y0 + h1, 0.8) + Ln(x0, yN, x0 + tw, yN, 1.2) + Ln(x0, yS, x0 + tw, yS, 1.2);
+    for (let i = 1; i < 12; i++) svg += Ln(xL, yB + i * bh, x0 + tw, yB + i * bh, i === 4 || i === 10 ? 1.2 : 0.6);
+    for (let i = 1; i < 12; i++) svg += Ln(x0 + LV, yB + i * bh, xL, yB + i * bh, 0.6);
+    for (let c = 1; c < nc; c++) { const x = xL + c * colW, day = c % k === 0; svg += Ln(x, day ? y0 : y0 + h1, x, yN, day ? 1.1 : 0.5) + Ln(x, yS, x, yE, day ? 1.1 : 0.5); }
+    svg += Ln(xL, yS, xL, yE, 0.8);
+    // ค่าที่บันทึก + เส้นกราฟ + ชื่อผู้ตรวจสอบ
+    const pts = [], pills = [];
+    for (let d = d1; d <= d2; d++) slots.forEach((sl, si) => {
+      const r = findRec(rows, `${ym}-${String(d).padStart(2, '0')}`, p.id, sl.id); if (!r) return;
+      const c = (d - d1) * k + si, cx = xL + (c + .5) * colW, bi = fridgeBand(r.temp), cy = yB + (bi + .5) * bh;
+      pts.push([cx, cy]); pills.push(pill(cx, cy, fmt1(r.temp), r.out, colW - 2));
+      svg += signCell(xL + c * colW, yS, colW, sh, r.staffName);
+    });
+    svg += poly(pts) + pills.join('');
+    y0 = yE + 12;
+  });
+  svg += T(40, y0 + 18, `หมายเหตุ : ค่าปกติของอุณหภูมิในตู้เย็นจะอยู่ในระหว่าง ${p.minT} - ${p.maxT} องศาเซลเซียส ถ้าสูงกว่า ${p.maxT} หรือต่ำกว่า ${p.minT} กรุณารายงานหัวหน้าแผนกหรือหัวหน้าเวรทราบเพื่อพิจารณาย้ายยาออกจากตู้เย็น`, { fs: 10.5, b: 1 });
+  svg += T(88, y0 + 34, 'และแจ้งหน่วยงานเครื่องมือแพทย์ดำเนินการแก้ไขต่อไป', { fs: 10.5, b: 1 });
+  svg += T(88, y0 + 52, `: ตรวจสอบช่วงเช้าเวลา ${slots[0].start.replace(':', '.')} - ${slots[0].end.replace(':', '.')} น. และช่วงเย็นก่อนเวลา ${slots[1].end.replace(':', '.')} น. ของทุกวัน`, { fs: 10.5, b: 1 });
+  svg += footer(B.settings.fridgeFormCode, W, H);
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="${SV.serif}">${svg}</svg>`;
+}
+
+/* ---------- หน้าพื้นที่จัดเก็บ (FI-NIM-NHS-00-011/3) ---------- */
+function roomPage(ym, p, rows) {
+  const W = 1123, H = 794, x0 = 28, LV = 26, LB = 84, nDays = daysIn(ym);
+  const colW = (W - 2 * x0 - LV - LB) / 31, xL = x0 + LV + LB, tw = LV + LB + 31 * colW;
+  const hh = 20, rh = 21.5, sh = 66, y0 = 80, yRH = y0 + hh, yT = yRH + 11 * rh, yS = yT + 10 * rh, yE = yS + sh;
+  let svg = header('Room Temperature and Humidity Record', ym, p, W);
+  RH_BANDS.forEach((b, i) => { if (shaded(b, p.minRH, p.maxRH)) svg += Rt(xL, yRH + i * rh, 31 * colW, rh, { f: FORM_BEIGE }); });
+  RT_BANDS.forEach((b, i) => { if (shaded(b, p.minT, p.maxT)) svg += Rt(xL, yT + i * rh, 31 * colW, rh, { f: FORM_BEIGE }); });
+  const serif = `font-family="${SV.serif}"`; // แถววันที่ในฟอร์มเดิมเป็น Times ตัวหนา
+  svg += T(x0 + (LV + LB) / 2, y0 + hh / 2 + 4, 'Date', { fs: 12.5, b: 1, a: 'middle', extra: serif });
+  for (let d = 1; d <= 31; d++) svg += T(xL + (d - .5) * colW, y0 + hh / 2 + 4, d, { fs: 11.5, b: 1, a: 'middle', c: d > nDays ? '#999' : '#000', extra: serif });
+  RH_BANDS.forEach((b, i) => svg += T(xL - 4, yRH + i * rh + rh / 2 + 4, b.l, { fs: 10.5, a: 'end' }));
+  RT_BANDS.forEach((b, i) => svg += T(xL - 4, yT + i * rh + rh / 2 + 4, b.l, { fs: 10.5, a: 'end' }));
+  svg += `<text font-size="11.5" text-anchor="middle" transform="translate(${x0 + LV / 2 + 4} ${yRH + 5.5 * rh}) rotate(-90)">Relative Humidity (%)</text>`;
+  svg += `<text font-size="11.5" text-anchor="middle" transform="translate(${x0 + LV / 2 + 4} ${yT + 5 * rh}) rotate(-90)">Temperature (Degree Celcius)</text>`;
+  svg += T(x0 + 8, yS + sh / 2 + 4, 'ผู้ตรวจสอบ', { fs: 11.5, b: 1 });
+  svg += Rt(x0, y0, tw, yE - y0, { s: '#000', sw: 1.6 });
+  svg += Ln(xL, y0, xL, yE, 1.2) + Ln(x0 + LV, yRH, x0 + LV, yS, 0.8);
+  [yRH, yT, yS].forEach(y => svg += Ln(x0, y, x0 + tw, y, 1.4));
+  for (let i = 1; i < 11; i++) svg += Ln(x0 + LV, yRH + i * rh, x0 + tw, yRH + i * rh, 0.6);
+  for (let i = 1; i < 10; i++) svg += Ln(x0 + LV, yT + i * rh, x0 + tw, yT + i * rh, 0.6);
+  for (let d = 1; d < 31; d++) svg += Ln(xL + d * colW, y0, xL + d * colW, yE, 0.6);
+  if (nDays < 31) svg += `<rect x="${xL + nDays * colW}" y="${y0}" width="${(31 - nDays) * colW}" height="${yE - y0}" fill="url(#hatch)" stroke="none"/>`;
+  const pRH = [], pT = [], pills = [];
+  for (let d = 1; d <= nDays; d++) {
+    const r = findRec(rows, `${ym}-${String(d).padStart(2, '0')}`, p.id, 'NOON'); if (!r) continue;
+    const cx = xL + (d - .5) * colW;
+    if (r.rh != null) { const cy = yRH + (rhBand(r.rh) + .5) * rh; pRH.push([cx, cy]); pills.push(pill(cx, cy, Math.round(r.rh), r.rh < p.minRH || r.rh > p.maxRH, colW - 2)); }
+    const cy2 = yT + (rtBand(r.temp) + .5) * rh; pT.push([cx, cy2]); pills.push(pill(cx, cy2, fmt1(r.temp), r.temp < p.minT || r.temp > p.maxT, colW - 2));
+    svg += signCell(xL + (d - 1) * colW, yS, colW, sh, r.staffName);
+  }
+  svg += poly(pRH, '#7a4a0c') + poly(pT) + pills.join('');
+  let y = yE + 24;
+  svg += T(40, y, `หมายเหตุ : ค่าปกติของอุณหภูมิห้อง ${p.minT}-${p.maxT} องศาเซลเซียส, ค่าความชื้นสัมพัทธ์ปกติ ${p.minRH}-${p.maxRH}%  ถ้าผิดปกติกรุณารายงานหัวหน้าแผนกหรือหัวหน้าเวรทราบเพื่อพิจารณาแก้ไขเบื้องต้นและแจ้งทีมช่างหรือเครื่องมือแพทย์`, { fs: 10.5, b: 1 });
+  svg += T(40, y + 17, `เพื่อดำเนินการแก้ไขและบันทึกผลการแก้ไขในระบบ, ตรวจสอบเวลา 12.00 น. ของทุกวัน`, { fs: 10.5, b: 1 });
+  svg += T(120, y + 44, 'Reference :', { fs: 10.5, b: 1, a: 'end' });
+  svg += T(126, y + 44, '1. The APSIC Guidelines for Disinfection and Sterisation of Instrument in Healthcare Facilities 2017. Asia Pacific Society of Infection Control (APSIC)', { fs: 10.5 });
+  svg += T(126, y + 60, '2. The <659> Packaging and Storage Requirements Revision Bulletin, Official May 1, 2017. The United States Pharmacopeia (USP)', { fs: 10.5 });
+  svg += footer(B.settings.roomFormCode, W, H);
+  const defs = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#bbb" stroke-width="1"/></pattern></defs>`;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="${SV.sans}">${defs}${svg}</svg>`;
+}
+
+/* ================== QR Code ================== */
+function renderQR() {
+  const base = API_URL ? location.origin + location.pathname : (B.appUrl || ''); // QR ชี้ไปหน้าเว็บที่เปิดอยู่
+  if (!base || typeof qrcode === 'undefined') { $('#qrgrid').innerHTML = '<p class="muted small">QR จะแสดงหลัง Deploy เป็นเว็บแอปแล้ว</p>'; return; }
+  const items = B.points.filter(p => p.active).map(p => ({ t: p.name, s: crit(p), u: base + '?p=' + encodeURIComponent(p.id), i: pIcon(p) }));
+  items.push({ t: 'หน้าหลัก / ภาพรวม', s: 'Dashboard และรายงาน', u: base + '?v=dash', i: '📊' });
+  $('#qrgrid').innerHTML = items.map(it => {
+    const q = qrcode(0, 'M'); q.addData(it.u); q.make();
+    return `<div class="card qrcard">${q.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}<h3>${it.i} ${esc(it.t)}</h3><div class="small muted">${esc(it.s)}</div><div class="small muted">สแกนเพื่อบันทึกอุณหภูมิ</div></div>`;
+  }).join('');
+}
+
+boot();
+</script>
+</body>
+</html>
