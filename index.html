@@ -391,7 +391,8 @@ function openForm(p) {
   $('#f-staff').oninput = () => { F.staff = null; clearTimeout(F.staffTimer); F.staffTimer = setTimeout(checkStaff, 500); validate(); };
   if (savedStaff) checkStaff();
   $('#f-file').onchange = onPhoto;
-  ['#f-t', '#f-rh', '#f-issue', '#f-action'].forEach(s => { const el = $(s); if (el) el.oninput = validate; });
+  ['#f-issue', '#f-action'].forEach(s => { const el = $(s); if (el) el.oninput = validate; });
+  ['#f-t', '#f-rh'].forEach(s => { const el = $(s); if (el) el.oninput = () => { if (F.aiBusy) { F.manual = true; $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>ใช้ค่าที่กรอกเอง — บันทึกได้เลยไม่ต้องรอ AI</div></div>`; } validate(); }; });
   $('#f-ok').onchange = validate;
   $('#f-save').onclick = save;
   validate();
@@ -416,7 +417,7 @@ function closeForm() { $('#rec-form').style.display = 'none'; $('#rec-list').sty
 async function onPhoto(e) {
   const file = e.target.files[0]; if (!file) return;
   try {
-    const dataUrl = await compressImage(file, 1280, 0.82);
+    const dataUrl = await compressImage(file, 1024, 0.75); // เล็กพอให้ส่งเร็ว ตัวเลขบนจอยังชัด
     F.photo = dataUrl; F.ai = null;
     $('#f-photo').innerHTML = `<div class="preview"><img src="${dataUrl}" alt="รูปเทอร์โมมิเตอร์"><label class="retake" for="f-file">📷 ถ่ายใหม่</label></div>`;
     e.target.value = '';
@@ -437,13 +438,20 @@ function compressImage(file, max, q) {
 }
 async function runAI() {
   if (!B.settings.aiReady) { $('#f-ai').innerHTML = `<div class="ai warn">✍️ กรอกตัวเลขจากหน้าจอด้วยตัวเองในข้อ 4</div>`; return; }
-  F.aiBusy = true; validate();
-  $('#f-ai').innerHTML = `<div class="ai wait"><div class="spin"></div><div>AI กำลังอ่านตัวเลขจากรูป…</div></div>`;
+  F.aiBusy = true; F.manual = false; validate();
+  // AI ฟรีบางช่วงตอบช้า — บอกเวลาที่รอ และให้พิมพ์ค่าเองได้ทันทีโดยไม่ต้องรอ
+  const t0 = Date.now();
+  const waitMsg = () => `<div class="ai wait"><div class="spin"></div><div>AI กำลังอ่านตัวเลขจากรูป… ${Math.round((Date.now() - t0) / 1000)} วิ<br><span class="small">ไม่อยากรอ? พิมพ์ตัวเลขในข้อ 4 เองได้เลย</span></div></div>`;
+  $('#f-ai').innerHTML = waitMsg();
+  const timer = setInterval(() => { if (F && F.aiBusy && !F.manual) $('#f-ai').innerHTML = waitMsg(); }, 1000);
   const photoAtStart = F.photo;
   try {
     const r = await api('readThermometer', F.photo.split(',')[1], 'image/jpeg', F.p.type);
     if (!F || F.photo !== photoAtStart) return;
-    if (r.ok && r.temperature != null) {
+    if (F.manual) { // พนักงานพิมพ์ค่าเองระหว่างรอ → ไม่เขียนทับ
+      F.ai = null;
+      $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>ใช้ค่าที่กรอกเอง${r.ok && r.temperature != null ? ` (AI อ่านได้ ${fmt1(r.temperature)} °C${r.humidity != null ? ' · ' + Math.round(r.humidity) + ' %RH' : ''})` : ''} — <b>ตรวจให้ตรงกับหน้าจอ</b></div></div>`;
+    } else if (r.ok && r.temperature != null) {
       F.ai = r;
       $('#f-t').value = r.temperature;
       if ($('#f-rh') && r.humidity != null) $('#f-rh').value = r.humidity;
@@ -456,7 +464,7 @@ async function runAI() {
     }
   } catch (e) {
     $('#f-ai').innerHTML = `<div class="ai warn">✍️ <div>AI อ่านค่าไม่สำเร็จ — กรุณากรอกตัวเลขเอง</div></div>`;
-  } finally { if (F) { F.aiBusy = false; validate(); } }
+  } finally { clearInterval(timer); if (F) { F.aiBusy = false; validate(); } }
 }
 function num(el) { if (!el) return null; const v = el.value.trim().replace(',', '.'); return v === '' || isNaN(Number(v)) ? null : Number(v); }
 function validate() {
@@ -467,7 +475,7 @@ function validate() {
   if ($('#vb-rh')) $('#vb-rh').className = 'valbox' + (rh == null ? '' : rhBad ? ' bad' : ' good');
   const out = tBad || rhBad;
   $('#f-out').style.display = out ? 'block' : 'none';
-  const ready = F.slot && F.staff && (F.photo || !B.settings.aiReady) && !F.aiBusy && t != null &&
+  const ready = F.slot && F.staff && (F.photo || !B.settings.aiReady) && (!F.aiBusy || F.manual) && t != null &&
     (p.type !== 'ROOM' || rh != null) && $('#f-ok').checked && (!out || ($('#f-issue').value.trim() && $('#f-action').value.trim()));
   $('#f-save').disabled = !ready;
 }
